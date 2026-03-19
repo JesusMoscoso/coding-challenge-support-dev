@@ -1,92 +1,92 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import { AlertCircle, CheckCircle, Clock } from "lucide-react"
-import { formatDistanceToNow } from "date-fns"
-import { es } from "date-fns/locale"
+import { useEffect, useState } from "react";
+import { AlertCircle, CheckCircle, Clock } from "lucide-react";
+import { formatDistanceToNow } from "date-fns";
+import { es } from "date-fns/locale";
 
 // Definición simple del tipo Ticket basado en nuestro modelo Prisma
 type Ticket = {
-  id: string
-  title: string
-  description: string
-  status: string
-  priority: string
-  companyId: string
-  createdAt: string
-  updatedAt: string
-}
+  id: string;
+  title: string;
+  description: string;
+  status: string;
+  priority: string;
+  companyId: string;
+  createdAt: string;
+  updatedAt: string;
+};
 
 export default function Dashboard() {
-  const [tickets, setTickets] = useState<Ticket[]>([])
-  const [loading, setLoading] = useState(true)
-  const [resolvingId, setResolvingId] = useState<string | null>(null)
+  const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [resolvingId, setResolvingId] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchTickets()
-  }, [])
+    fetchTickets();
+  }, []);
 
   const fetchTickets = async () => {
     try {
-      const res = await fetch("/api/tickets")
-      const data = await res.json()
-      setTickets(data)
+      const res = await fetch("/api/tickets");
+      const data = await res.json();
+      setTickets(data);
     } catch (error) {
-      console.error("Error fetching tickets:", error)
+      console.error("Error fetching tickets:", error);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const handleResolve = async (ticket: Ticket) => {
-    if (ticket.status === "Resuelto") return
-    
-    setResolvingId(ticket.id)
+    if (ticket.status === "Resuelto") return;
+
+    setResolvingId(ticket.id);
     try {
       const res = await fetch(`/api/tickets/${ticket.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: "Resuelto" }),
-      })
+      });
 
       if (res.ok) {
-        const updatedTicket = await res.json()
-        
-        // BUG 2 INTENCIONAL: Mutación de estado de React
-        // Se altera el arreglo original en lugar de crear uno nuevo.
-        // Esto causa que React no detecte el cambio y no vuelva a renderizar la UI inmediatamente.
-        const ticketIndex = tickets.findIndex((t) => t.id === updatedTicket.id)
-        if (ticketIndex !== -1) {
-          tickets[ticketIndex] = updatedTicket
-          setTickets(tickets) // React no verá esto como un cambio de estado válido
-        }
+        const updatedTicket = await res.json();
+        // FIX: Evitamos mutar el estado directamente.
+        // React no detecta cambios si se modifica el mismo array en memoria.
+        // En su lugar, creamos un nuevo array usando map para asegurar el re-render.
+        setTickets((prev) =>
+          prev.map((t) => (t.id === updatedTicket.id ? updatedTicket : t)),
+        );
+        // si todo bien jalamos los tickets
+        await fetchTickets();
       }
     } catch (error) {
-      console.error("Error resolving ticket:", error)
+      console.error("Error resolving ticket:", error);
     } finally {
-      setResolvingId(null)
+      setResolvingId(null);
     }
-  }
+  };
 
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
-    )
+    );
   }
 
   return (
     // BUG 1 INTENCIONAL: El Navbar inferior bloquea el contenido
-    // En móviles, falta un padding inferior (ej. pb-20) en este contenedor para que el 
+    // En móviles, falta un padding inferior (ej. pb-20) en este contenedor para que el
     // último ticket no quede escondido detrás del fixed footer y su botón sea in-clickeable.
-    <div className="min-h-screen bg-gray-50 relative">
-      
+    <div className="min-h-screen bg-gray-50 relative pb-20">
       {/* Header Fijo */}
       <header className="bg-blue-600 text-white shadow-md sticky top-0 z-10">
         <div className="max-w-3xl mx-auto px-4 py-4 flex justify-between items-center">
           <h1 className="text-xl font-bold">TechCorp Soporte</h1>
-          <span className="text-sm bg-blue-700 px-3 py-1 rounded-full">Usuario Actual: Admin</span>
+          <span className="text-sm bg-blue-700 px-3 py-1 rounded-full">
+            Usuario Actual: Admin
+          </span>
         </div>
       </header>
 
@@ -94,8 +94,12 @@ export default function Dashboard() {
       <main className="max-w-3xl mx-auto px-4 py-6">
         <div className="mb-6 flex justify-between items-end">
           <div>
-            <h2 className="text-2xl font-bold text-gray-800">Tickets Asignados</h2>
-            <p className="text-gray-500">Gestiona las solicitudes de los clientes.</p>
+            <h2 className="text-2xl font-bold text-gray-800">
+              Tickets Asignados
+            </h2>
+            <p className="text-gray-500">
+              Gestiona las solicitudes de los clientes.
+            </p>
           </div>
         </div>
 
@@ -106,10 +110,12 @@ export default function Dashboard() {
             </div>
           ) : (
             tickets.map((ticket) => (
-              <div 
-                key={ticket.id} 
+              <div
+                key={ticket.id}
                 className={`bg-white rounded-lg shadow-sm border p-5 transition-colors ${
-                  ticket.status === "Resuelto" ? "border-green-200 bg-green-50/30" : "border-gray-200"
+                  ticket.status === "Resuelto"
+                    ? "border-green-200 bg-green-50/30"
+                    : "border-gray-200"
                 }`}
               >
                 <div className="flex justify-between items-start mb-3">
@@ -128,7 +134,7 @@ export default function Dashboard() {
                       {ticket.companyId}
                     </span>
                   </div>
-                  
+
                   {ticket.status === "Resuelto" ? (
                     <span className="flex items-center text-green-600 text-sm font-medium gap-1">
                       <CheckCircle className="w-4 h-4" />
@@ -142,14 +148,21 @@ export default function Dashboard() {
                   )}
                 </div>
 
-                <h3 className="text-lg font-semibold text-gray-900 mb-1">{ticket.title}</h3>
-                <p className="text-gray-600 text-sm mb-4">{ticket.description}</p>
+                <h3 className="text-lg font-semibold text-gray-900 mb-1">
+                  {ticket.title}
+                </h3>
+                <p className="text-gray-600 text-sm mb-4">
+                  {ticket.description}
+                </p>
 
                 <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-100">
                   <span className="text-xs text-gray-400">
-                    Creado hace {formatDistanceToNow(new Date(ticket.createdAt), { locale: es })}
+                    Creado hace{" "}
+                    {formatDistanceToNow(new Date(ticket.createdAt), {
+                      locale: es,
+                    })}
                   </span>
-                  
+
                   {ticket.status !== "Resuelto" && (
                     <button
                       onClick={() => handleResolve(ticket)}
@@ -184,7 +197,6 @@ export default function Dashboard() {
           <span className="text-xs font-medium">Resueltos</span>
         </div>
       </div>
-
     </div>
-  )
+  );
 }

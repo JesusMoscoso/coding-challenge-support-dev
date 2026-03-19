@@ -1,5 +1,5 @@
-import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
 
 export async function GET() {
   try {
@@ -7,13 +7,20 @@ export async function GET() {
     // El usuario (simulado) pertenece a 'TechCorp', pero aquí traemos todos los tickets
     // de la base de datos sin filtrar.
     const tickets = await prisma.ticket.findMany({
-      orderBy: { createdAt: 'desc' },
-      // Falta: where: { companyId: 'TechCorp' } o usando el usuario de la sesión
-    })
+      // FIX: Se agrega filtro por companyId para evitar fuga de datos entre empresas.
+      // Antes se devolvían todos los tickets sin restricción, exponiendo información sensible.
+      where: {
+        companyId: "TechCorp",
+      },
+      orderBy: { createdAt: "desc" },
+    });
 
-    return NextResponse.json(tickets)
+    return NextResponse.json(tickets);
   } catch (error) {
-    console.error('Error fetching tickets:', error)
-    return NextResponse.json({ error: 'Error fetching tickets' }, { status: 500 })
+    console.error("Error fetching tickets:", error);
+    return NextResponse.json(
+      { error: "Error fetching tickets" },
+      { status: 500 },
+    );
   }
 }
